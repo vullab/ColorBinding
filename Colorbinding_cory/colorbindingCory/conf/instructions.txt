@@ -1,0 +1,11 @@
+You will see colored shapes, one of which will be cued by a line (the target).
+
+Your job is to report the colors of the two shapes that made up the target.
+
+It might be very hard, but try your best. 
+
+Please pay attention, and try not to move your eyes from the fixation spot!
+
+There will be a few practice trials, followed by the actual experiment. 
+
+Good luck!

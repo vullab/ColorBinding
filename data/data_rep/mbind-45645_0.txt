@@ -1,0 +1,2 @@
+cue-length,ms-precue,resp-v-hv,ms-st-cue,nitems,resp-h-pos,actualStimOn,resp-v-pos,ms-stimon,resp-h-hv,cue-loc-int,cue-loc-x,cue-loc-y,radius,bars-or-spot,npractice,ntrials,offsett
+3.1,0.0,2,400.0,22.0,-1,0.0972452163696,-2,94.0,1,17,-5.24605364197,0.754268642848,5.3,0,5.0,300.0,-10.5

@@ -1,0 +1,4 @@
+cue-length,ms-precue,resp-v-hv,ms-st-cue,nitems,resp-h-pos,resp-v-pos,ms-stimon,resp-h-hv,cue-loc-int,cue-loc-x,cue-loc-y,radius,bars-or-spot,npractice,ntrials
+3.1,0.0,2,245.0,22.0,1,2,94.0,2,10,1.49318255126,-5.08531276016,5.3,2.0,1.0,500.0
+cue-length,ms-precue,resp-v-hv,ms-st-cue,nitems,resp-h-pos,resp-v-pos,ms-stimon,resp-h-hv,cue-loc-int,cue-loc-x,cue-loc-y,radius,bars-or-spot,npractice,ntrials
+3.1,0.0,1,245.0,22.0,1,1,94.0,1,5,5.24605364197,0.754268642848,5.3,2.0,1.0,500.0

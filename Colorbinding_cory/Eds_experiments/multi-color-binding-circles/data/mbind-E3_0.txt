@@ -1,0 +1,2 @@
+cue-length,ms-precue,resp-v-hv,ms-st-cue,nitems,resp-h-pos,resp-v-pos,ms-stimon,resp-h-hv,cue-loc-int,cue-loc-x,cue-loc-y,radius,bars-or-spot,npractice,ntrials
+3.1,0.0,1,245.0,22.0,-2,1,94.0,2,20,-2.86539633251,4.45864372401,5.3,2.0,1.0,500.0

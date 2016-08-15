@@ -1,0 +1,512 @@
+a[1]
+a[-1]
+a[end]
+a[length(a)]
+a[length(a)-1]
+a=plotPost(estimates$mu.diff)
+a
+source('~/Downloads/Lesson17-Bayes.R', echo=TRUE)
+library(PSYC201)
+library(rjags)
+library(agricolae)
+################################
+# 17.1 - Bayesian workflow     #
+################################
+# Unlike many of the functions we've discussed so far, there isn't built-in Bayesian statistics in R
+# Instead, Bayesian analysis is done by linking to the JAGS program through the 'rjags' package functions
+# John Kruschke is working on making this more accessible, but it is still a work in progress
+# This unfortunately makes the process somewhat more complex than much of the analysis that we have done in the past
+# Also note that there are generally not analytic methods for solving Bayesian analysis
+# And so running these analyses are going to necessarily be slower than frequentist tests
+# In order to run Bayesian statistics, you must complete the following tasks in order:
+#  (a) Specify the model
+#  (b) Load the data in a way JAGS can read it
+#  (c) Initialize & run the model
+#  (d) Review the output
+################################
+# 17.2 - Bayesian t-tests      #
+################################
+# Note: most of this section is borrowed from John Kruschke's work
+# For more details and some extensions of this model, see his website:
+#  http://www.indiana.edu/~kruschke/BEST/
+# If you're just doing Bayesian t-tests, just using his code will be much more efficient
+# However, it only covers t-tests, so you should know the guts in case you want to extend this to other models
+# Like in the next section...
+# For this analysis, we'll be working with the memory.exp data that we've run t-tests on before
+head(memory.exp)
+# And we can run a t.test quickly to see what we've done before:
+t.test(Score ~ Group, data=memory.exp)
+# Recall this is looking for a difference between memory scores for the control and experimental groups
+# In parameter estimation, we want to describe our belief about the difference between the groups
+# Thus we want a probability distribution over our belief of what that difference is
+# Our test then comes down to asking whether most of our belief about that estimate is not zero (or close to zero)
+# We will therefore follow the four steps in order
+###############################
+# (a) Specify the model
+# For this section, it might be helpful to look at the model Kruschke uses on the bottom-left of this page:
+#  http://www.indiana.edu/~kruschke/BEST/
+# (i)
+# As a baseline for our t-test model, we believe that there's an average 'Score' in the world
+# But our best estimate for the average scores of both groups will be different from that...
+# So the means of groups will be picked from a distribution around this average 'Score'
+# (ii)
+# We also want this to be an unequal variance t-test
+# Thus both the control and experimental groups will have their own variances
+# And we want to put an uninformative prior on these variances...
+#  they should be able to be nearly anything
+# (iii)
+# Each observation is pulled from a distribution
+# This distribution is characterized by the mean (i) and sd(ii) of each group
+# But these distributions may not be normal... they may be fat tailed
+# Thus we want to draw from a t-distribution instead
+# (Note: this has nothing to do with the t-test...
+#  it's a convenient way of allowing fat tails)
+# But for this we need a df parameter: nu
+# We want the prior on this parameter to be roughly split between normal and fat-tailed distributions
+# As a final note - JAGS doesn't use standard deviations to define distributions...
+# Instead it uses the precision variable 'tau'
+# But precision is just defined as inverse variance, so is directly tied to standard deviation
+# It just sometimes requires some inverting to calculate
+# Thus we have the following variables of interest:
+#  y[i]: The score for observation i
+#  x[i]: The group membership (ctrl or exp) for observation i
+#  mu[j]: The mean of group j (j=1: ctrl; j=2: exp)
+#  sigma[j]: The standard deviation of group j
+#  nu: The df parameter for the distribution of individual scores
+# There are also some helper variables we will need to worry about:
+#  tau[j]: The precision of group j: 1 / sigma[j]^2
+#  muM: The overall average of Score to center mu[j] around
+#  muP: The precision of mu[j] - very uninformative
+#  sigmaLow: lower bounds on prior for sigma[j]
+#  sigmaHigh: upper bounds on prior for sigma[j]
+#  Ntotal: the total number of observations
+#  nuMinusOne: equal to (nu - 1)... for reasons outside the scope of this lesson
+# Finally, a couple notes about JAGS and the rjags interface:
+#  (1): JAGS can't take a model directly from R...
+#       Therefore, we'll need to write the model as a string, then save it to a txt file
+#       We will call this file 'model.txt'
+#  (2): In JAGS, there are two ways of calculating variables
+#       The '<-' operator works like R and does direct calculation
+#       The '~' operator makes each variable a random draw from a distribution
+# So without further ado - let's define the model and write it out
+# After that, we'll go through the three sections starting from the bottom
+modelString = "
+model {
+for ( i in 1:Ntotal ) {
+y[i] ~ dt( mu[x[i]] , tau[x[i]] , nu )
+}
+for ( j in 1:2 ) {
+mu[j] ~ dnorm( muM , muP )
+tau[j] <- 1/pow( sigma[j] , 2 )
+sigma[j] ~ dunif( sigmaLow , sigmaHigh )
+}
+nu <- nuMinusOne+1
+nuMinusOne ~ dexp(1/29)
+}
+" # close quote for modelString
+# Write out modelString to a text file
+writeLines( modelString , con="model.txt" )
+# Let's start from the bottom section:
+#    nu <- nuMinusOne+1
+#    nuMinusOne ~ dexp(1/29)
+# This just enacts part (iii)
+# nu is drawn from a shifted exponential distribution
+# Don't worry about this too much
+# Just note that this means the prior is 50/50 on whether the distribution is fat-tailed
+# It's been chosen this way by Kruschke - but you can change it if you want another prior
+# Next, the middle section:
+#    for ( j in 1:2 ) {
+#      mu[j] ~ dnorm( muM , muP )
+#      tau[j] <- 1/pow( sigma[j] , 2 )
+#      sigma[j] ~ dunif( sigmaLow , sigmaHigh )
+#    }
+# This section defines the group distributions
+# j goes from 1 to 2 since we have two groups (j=1: ctrl; j=2: exp)
+# Within each of these groups, the mu and tau parameters are chosen
+# mu is pulled from a normal distribution centered on muM with precision muP
+# (We will define muM and muP later outside of the model)
+# sigma is pulled from a uniform distribution from sigmaLow to sigmaHigh
+# (Again, sigmaLow and sigmaHigh will be defined elsewhere)
+# Then tau is just defined as 1/sigma^2
+# Finally, the top section:
+#    for ( i in 1:Ntotal ) {
+#      y[i] ~ dt( mu[x[i]] , tau[x[i]] , nu )
+#    }
+# This iterates through each of the observations
+# It defines each score y[i] as being drawn from a t distribution with df nu (as we mentioned above)
+# And the mean and precision are defined based on the ith group membership x[i]
+# So now that we have our model, we need to work with our data
+###############################
+# (b) Load the data
+# To load the data, you need to make a list in a format readable by rjags
+# This list should have a separate element for each undefined variable in the JAGS model
+# (But you can ignore any variables calculated in the model, other than the data)
+# y and x are easy to define - they are just the score and group membership
+# Ntotal is the number of observations, which is likewise easy to find
+# muM is defined as the average of all of the Scores
+#  after all, that's your best starting guess for the middle
+# muP is supposedly very uninformative - it is based of the stdev of Scores
+#  ... but of course is a standard deviation 1000 times greater
+#  (note that it is defined in terms of precision though)
+# sigmaLow and sigmaHigh are also based on the stdev of Scores
+#  but here we want to let sigma range from 1000 times less to 1000 times greater
+dataList = list(
+y = memory.exp$Score ,
+x = memory.exp$Group ,
+Ntotal = length(memory.exp$Score) ,
+muM = mean(memory.exp$Score) ,
+muP = 0.000001 * 1/sd(memory.exp$Score)^2 ,
+sigmaLow = sd(memory.exp$Score) / 1000 ,
+sigmaHigh = sd(memory.exp$Score) * 1000
+)
+# Note that our choices for muM, muP, sigmaLow, and sigmaHigh are assumptions
+# These are the same assumptions Kruschke uses (after, I assume, a large amount of testing)
+#  but they are rules of thumb for uninformative priors nonetheless
+# Now that we have our model and data, we can set up and run the model
+###############################
+# (c) Run the model
+# Before we run the model, we must set initial conditions and parameters
+# First, we'll give each MCMC chain a starting point for mu, sigma, and nu
+# The start of mu should be the empirical means
+# The start of sigma should be the empirical standard deviations
+# And we'll just set nu to 5 (as per Kruschke's suggestion)
+ctrl = subset(memory.exp,Group=='Control')$Score
+exp = subset(memory.exp,Group=='Experimental')$Score
+mu = c( mean(ctrl) , mean(exp) )
+sigma = c( sd(ctrl) , sd(exp) )
+initsList = list( mu = mu , sigma = sigma , nuMinusOne = 4 )
+# Next we must set flags for the model, including:
+# The parameters from the model you want to monitor
+parameters = c( "mu" , "sigma" , "nu" )
+# The number of chains you want
+# More chains makes the MCMC less likely to get stuck in local minima
+#  ... but too many makes for slower set-up
+nChains = 3
+# The number of observations you want for the posterior
+numSavedSteps=100000
+# The number of steps in between measured observations
+# Just set this to one...
+# Historically it was thought higher values reduced autocorrelation,
+#  but recently it was found that with enough observations it's not a problem
+thinSteps=1
+# This just calculates the number of steps per chain
+nIter = ceiling( ( numSavedSteps * thinSteps ) / nChains )
+# And now some parameters to tune the MCMC process
+adaptSteps = 500 # Tunes MCMC for more efficiency
+burnInSteps = 1000 # Decreases sensitivity to initial conditions
+# Now we're ready to load the model using the jags.model() command
+# The first argument must be the model file name (which we made as 'model.txt')
+# And we give it further arguments:
+#  data: the data list we created above
+#  inits: the list of initial parameter values we created above
+#  n.chains: the number of chains we want to use
+#  n.adapt: the adaptSteps value from above
+jagsModel = jags.model( "model.txt" , data=dataList , inits=initsList ,
+n.chains=nChains , n.adapt=adaptSteps )
+# Now we have the JAGS model loaded into R
+# Then we need to do 'burn-in' to reduce reliance on initialization
+# This just runs the model forward for a number of steps without recording anything
+# For this we use the update() command, and give it the number of burnInSteps we defined
+update( jagsModel , n.iter=burnInSteps )
+# Finally, we run the model forward and sample from it using coda.samples, using the arguments:
+#  The first argument it takes is the JAGS model object
+#  variable.names: the list of parameters we care about
+#  n.iter: the number of steps to take for each chain
+#  thin: the number of steps between observations (remember - should be 1)
+MCMCsamples = coda.samples( jagsModel , variable.names=parameters ,
+n.iter=nIter , thin=thinSteps )
+# Now this creates an mcmc.list with three matrices of observations (one for each chain)
+# So we need to squish them together and make them into a data frame for easy use
+# There is a function in PSYC201 for this: flattenMCMC
+estimates = flattenMCMC(MCMCsamples)
+###############################
+# (d) Review the data
+# Let's see what we have from this data:
+head(estimates)
+# Well, we seem to have a bunch of values for each of the parameters we asked for
+# Here, each row represents a separate sample from the MCMC distribution
+# So the distribution of our posterior beliefs about these parameters should follow these distributions
+# Let's first look at mu.1. and mu.2. - in this case the means of the control and experimental groups respectively
+summary(estimates$mu.1.)
+summary(estimates$mu.2.)
+# Check out the means - they are very close to the actual means in the data as we would expect
+mean(ctrl)
+mean(exp)
+# We can also visualize the distributions of the two means
+# For this, we'll use the plotPost function (from the PSYC201 package, but stolen shamelessly from Kruschke)
+par(mfrow = c(1,2))
+plotPost(estimates$mu.1.,xlim = c(16,26))
+plotPost(estimates$mu.2.,xlim = c(16,26))
+par(mfrow = c(1,1))
+# Well, these do look like different distributions
+# But are they truly different?
+# First, let's note the HDI - the Highest Density Interval
+# The HDI by definition includes the 95% of belief for which no other parameter estimates are have greater beliefs
+# This is the Bayesian equivalent of a confidence interval...
+# Except in this case, it's interpretation is intuitive - you are 95% sure that the statistic falls between those values
+# (Instead of some convoluted mess about what would happen if you repeated the experiment many times, as frequentist CIs are)
+# As a note, in case you need to get this out numerically, you can use the HDIofMCMC() function (also shamelessly stolen from Kruschke)
+HDIofMCMC(estimates$mu.1.)
+# In this case, the HDIs of the two distributions overlap
+# But that doesn't necessarily mean that we don't have a belief that they are different...
+# For this, we want to look at the distribution of differences and ask if we have evidence to believe that it isn't 0
+# First we calculate the differences:
+estimates$mu.diff = estimates$mu.2. - estimates$mu.1.
+summary(estimates$mu.diff)
+plotPost(estimates$mu.diff)
+# This looks like most of our believe is that the difference is greater than 0
+# But how much?
+# For this we use the compVal argument in plotPost:
+plotPost(estimates$mu.diff,compVal=0)
+# This should only be about 1.5% - and so 98.5% of our belief is telling us that the difference between the means
+# Which to me is pretty good evidence that there is a difference
+# But unlike frequentist statistics which end with a difference test, we can do so much more!
+# We can ask - are the variances equal between the two groups?
+# We have the data for this...
+summary(estimates$sigma.1.)
+summary(estimates$sigma.2.)
+par(mfrow = c(1,2))
+plotPost(estimates$sigma.1.,xlim = c(1,7))
+plotPost(estimates$sigma.2.,xlim = c(1,7))
+par(mfrow = c(1,1))
+# They look pretty close... but again we can test the distribution of differences:
+estimates$sigma.diff = estimates$sigma.2. - estimates$sigma.1.
+summary(estimates$sigma.diff)
+plotPost(estimates$sigma.diff)
+# Well, this distribution is centered around 0... so can we say they're the same?
+# That depends on what your definition of 'the same' is...
+# We might say that a difference that is ~10% of the empirical standard deviation or less is considered 'close enough'
+# Thus we define a Region Of Practical Equivalence (ROPE) of [-0.35, 0.35]
+# Now we want to ask - how much of our belief about the difference between the stdevs falls within the ROPE?
+# We can use the ROPE argument to plotPost for this - we give it the lower and upper bounds
+plotPost(estimates$sigma.diff, ROPE = c(-.35,.35))
+summary(estimates$sigma.diff)
+sd(memory.exp$Score)
+estimates$mu.diff = estimates$mu.5 - estimates$mu.1
+sd10=sd(InsectSprays$count)*.1
+sig.post = plotPost(estimates$sigma.diff, ROPE = c(-sd10,sd10)
+plotPost(estimates$sigma.diff, ROPE = c(-sd10,sd10)
+plotPost(estimates$sigma.diff, ROPE = c(-sd10,sd10)
+)
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+sig.post = plotPost(estimates$mu.diff, ROPE = c(-sd10,sd10))
+sig.post
+tail(sig.post,1)
+sig.post[length(sig.post]
+sig.post[length(sig.post)]
+sig.post[length(sig.post)-1]
+sd10
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+ans.3
+sig.post2
+ans.3=sig.post2[length(sig.post2)]
+ans.3
+plotPost(estimates$mu.diff, ROPE = c(-sd10,sd10))
+ans.3
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+sig.post2
+sig.post
+ans.2
+1-sig.post[length(sig.post)-3]
+summary(sig.post)
+estimates$mu.diff = estimates$mu.5. - estimates$mu.1.
+summary(estimates$mu.diff)
+plotPost(estimates$mu.diff, compVal = 0)
+estimates$mu.diff = estimates$mu.5. - estimates$mu.1.
+#sd10=sd(InsectSprays$count)*.1
+sig.post = plotPost(estimates$mu.diff, compVal=0)
+ans.2=1-sig.post[length(sig.post)-3]
+sig.post
+estimates$mu.diff = estimates$mu.5. - estimates$mu.1.
+summary(estimates$mu.diff)
+plotPost(estimates$mu.diff, compVal = 0)
+sig.post
+plotBayesianParameter(estimates,'mu',parameterLabels = levels(InsectSprays$spray))
+plotBayesianParameter(estimates,'mu',parameterLabels = levels(InsectSprays$spray))
+plotBayesianParameter(estimates,'mu',parameterLabels = levels(InsectSprays$sprays))
+estimates
+head(estimates)
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+plotBayesianParameter(estimates,'mu',parameterLabels = levels(InsectSprays$sprays))
+plotBayesianParameter(estimates2,'mu',parameterLabels = levels(InsectSprays$sprays))
+plotBayesianParameter(estimates,'sigma',parameterLabels=levels(InsectSprays$sprays))
+head(estimates)
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+ans.6
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+ans.3
+ans.6
+plotBayesianParameter(estimates2,'mu',parameterLabels = levels(InsectSprays$sprays))
+plotBayesianParameter(estimates,'mu',parameterLabels = levels(InsectSprays$sprays))
+estimates2
+source('~/Documents/Winter 2013/stat/timlew_psyc201_hw7.R', echo=TRUE)
+plotBayesianParameter(estimates,'sigma',parameterLabels=levels(InsectSprays$sprays))
+plotBayesianParameter(estimates,'mu',parameterLabels = levels(InsectSprays$sprays))
+dbeta(1,1)
+dbeta(1,1,1)
+dbeta(1,1,1)
+dbeta(1,1,1)
+dbeta(1,1,2)
+dbeta(.5,1,2)
+dbeta(.5,1,2)
+dbeta(.5,1,2)
+dbeta(.5,1,2)
+dbeta(.25,1,2)
+dbeta(.2,1,2)
+R.version
+install.packages('agricolae',repos = "http://cran.stat.ucla.edu/")
+source('~/Downloads/PSYC201Setup (1).R', echo=TRUE)
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R', echo=TRUE)
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R', echo=TRUE)
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R', echo=TRUE)
+results
+result
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/model_4.R', echo=TRUE)
+results
+source('~/.active-rstudio-document', echo=TRUE)
+results2
+results
+for (versionNum in c(-1,0,1,2,5,6,8,9,11,12,13)){
+dataVersion <- subset(data,data$version == versionNum)
+imageMatrix <- matrix(0,10,10)
+for (rowNum in 1:nrow(dataVersion)){
+horizRespIdx <- dataVersion[rowNum,"resp.h.pos"]+3 + (dataVersion[rowNum,"resp.h.hv"]-1)*5
+vertRespIdx <- dataVersion[rowNum,"resp.v.pos"]+3 + (dataVersion[rowNum,"resp.v.hv"]-1)*5
+imageMatrix[horizRespIdx,vertRespIdx] = imageMatrix[horizRespIdx,vertRespIdx] + 1/nrow(dataVersion)
+}
+quartz()
+image(sqrt(matrix(rev(imageMatrix),nrow=10,byrow=TRUE)[(10:1),] ),col=gray((0:128)/128))
+result2 <- optim(par = c(0.1,.15,.25,.5,.8,1.5,.1), fn = fitBindingModel2, data = imageMatrix)
+#	print(result$par)
+#	print(result$value)
+results2 <- rbind(results,c(result2$par,result2$value))
+# fitBindingModel(result$par,data = imageMatrix, plot = TRUE)
+}
+warnings
+warnings()
+image(sqrt(matrix(rev(imageMatrix),nrow=10,byrow=TRUE)[(10:1),] ),col=gray((0:128)/128))
+result <- optim(par = c(0.1,.15,.3,.5,.8,1.5), fn = fitBindingModel, data = imageMatrix)
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R', echo=TRUE)
+results2
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R', echo=TRUE)
+runBindingModel
+runBindingModel(.1,.15, .15,.25, .25, .5, .8, .8,1.5, 1.5)
+finalMatrix
+(1-p_part_A) * (
+(p_color_A * p_part_B) * Acolor_Bpart_matrix + # TFL-Guess A color for A
+(1-p_part_B) * ( # TFL-If you don't remember B part but remember color of A
+(p_color_A *  p_color_B) * Acolor_Acolor_matrix + # TFL-Guess an A color
+(p_color_A * p_color_B) * Acolor_Bcolor_matrix + # TFL-Guess a B color
+(p_color_A * (1 - p_color_A - p_color_B)) * Acolor_DR_matrix ) + # TFL--Guess any color
+(p_color_B * p_part_B) * Bcolor_Bpart_matrix + # TFL-Guess a B color for A
+(1-p_part_B) * (
+(p_color_B *  p_color_A) * Bcolor_Acolor_matrix +
+(p_color_B * p_color_B) * Bcolor_Bcolor_matrix +
+(p_color_B * (1 - p_color_A - p_color_B)) * Bcolor_DR_matrix ) +
+((1 - p_color_A - p_color_B) * p_part_B) * G_Bpart_matrix + # TFL-Guess color for A
+(1-p_part_B) * (
+((1 - p_color_A - p_color_B) *  p_color_A) * Acolor_DR_matrix +
+((1 - p_color_A - p_color_B) * p_color_B) * Bcolor_DR_matrix +
+((1 - p_color_A - p_color_B) * (1 - p_color_A - p_color_B)) * GG_matrix )))
+p_part_A
+runBindingModel(.1,.15, .15,.25, .25, .5, .8, .8,1.5, 1.5)
+prob_flip
+p_part_B
+(1-p_part_B) * (
+((1 - p_color_A - p_color_B) *  p_color_A) * Acolor_DR_matrix +
+((1 - p_color_A - p_color_B) * p_color_B) * Bcolor_DR_matrix +
+((1 - p_color_A - p_color_B) * (1 - p_color_A - p_color_B)) * GG_matrix )))
+(1-p_part_B) * ( ((1 - p_color_A - p_color_B) *  p_color_A) * Acolor_DR_matrix + ((1 - p_color_A - p_color_B) * p_color_B) * Bcolor_DR_matrix + ((1 - p_color_A - p_color_B) * (1 - p_color_A - p_color_B)) * GG_matrix )))
+(1-p_part_A) * (
+(p_color_A * p_part_B) * Acolor_Bpart_matrix + # TFL-Guess A color for A
+(1-p_part_B) * ( # TFL-If you don't remember B part but remember color of A
+(p_color_A *  p_color_B) * Acolor_Acolor_matrix + # TFL-Guess an A color
+(p_color_A * p_color_B) * Acolor_Bcolor_matrix + # TFL-Guess a B color
+(p_color_A * (1 - p_color_A - p_color_B)) * Acolor_DR_matrix ) + # TFL--Guess any color
+(p_color_B * p_part_B) * Bcolor_Bpart_matrix + # TFL-Guess a B color for A
+(1-p_part_B) * (
+(p_color_B *  p_color_A) * Bcolor_Acolor_matrix +
+(p_color_B * p_color_B) * Bcolor_Bcolor_matrix +
+(p_color_B * (1 - p_color_A - p_color_B)) * Bcolor_DR_matrix ) +
+((1 - p_color_A - p_color_B) * p_part_B) * G_Bpart_matrix + # TFL-Guess color for A
+(1-p_part_B) * (
+((1 - p_color_A - p_color_B) *  p_color_A) * Acolor_DR_matrix +
+((1 - p_color_A - p_color_B) * p_color_B) * Bcolor_DR_matrix +
+((1 - p_color_A - p_color_B) * (1 - p_color_A - p_color_B)) * GG_matrix )))
+(1-p_part_A) * (
+(p_color_A * p_part_B) * Acolor_Bpart_matrix + # TFL-Guess A color for A
+(1-p_part_B) * ( # TFL-If you don't remember B part but remember color of A
+(p_color_A *  p_color_B) * Acolor_Acolor_matrix + # TFL-Guess an A color
+(p_color_A * p_color_B) * Acolor_Bcolor_matrix + # TFL-Guess a B color
+(p_color_A * (1 - p_color_A - p_color_B)) * Acolor_DR_matrix ) + # TFL--Guess any color
+(p_color_B * p_part_B) * Bcolor_Bpart_matrix + # TFL-Guess a B color for A
+(1-p_part_B) * (
+(p_color_B *  p_color_A) * Bcolor_Acolor_matrix +
+(p_color_B * p_color_B) * Bcolor_Bcolor_matrix +
+(p_color_B * (1 - p_color_A - p_color_B)) * Bcolor_DR_matrix ) +
+((1 - p_color_A - p_color_B) * p_part_B) * G_Bpart_matrix + # TFL-Guess color for A
+(1-p_part_B) * (
+((1 - p_color_A - p_color_B) *  p_color_A) * Acolor_DR_matrix +
+((1 - p_color_A - p_color_B) * p_color_B) * Bcolor_DR_matrix +
+((1 - p_color_A - p_color_B) * (1 - p_color_A - p_color_B)) * GG_matrix ))
+(p_color_A * p_part_B) * Acolor_Bpart_matrix + # TFL-Guess A color for A
+(1-p_part_B) * ( # TFL-If you don't remember B part but remember color of A
+(p_color_A *  p_color_B) * Acolor_Acolor_matrix + # TFL-Guess an A color
+(p_color_A * p_color_B) * Acolor_Bcolor_matrix + # TFL-Guess a B color
+(p_color_A * (1 - p_color_A - p_color_B)) * Acolor_DR_matrix )
+whole_prob
+sd_whole
+prob_norm(dlaplace(-2:2,0,sd_whole))
+dlaplace(-2:2,0,sd_whole)
+prob_norm(dlaplace(-2:2,0,sd_whole))
+Acolor_DR_matrix
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R', echo=TRUE)
+results2
+results3 <- NULL
+for (versionNum in c(-1,0,1,2,5,6,8,9,11,12,13)){
+dataVersion <- subset(data,data$version == versionNum)
+imageMatrix <- matrix(0,10,10)
+for (rowNum in 1:nrow(dataVersion)){
+horizRespIdx <- dataVersion[rowNum,"resp.h.pos"]+3 + (dataVersion[rowNum,"resp.h.hv"]-1)*5
+vertRespIdx <- dataVersion[rowNum,"resp.v.pos"]+3 + (dataVersion[rowNum,"resp.v.hv"]-1)*5
+imageMatrix[horizRespIdx,vertRespIdx] = imageMatrix[horizRespIdx,vertRespIdx] + 1/nrow(dataVersion)
+}
+quartz()
+image(sqrt(matrix(rev(imageMatrix),nrow=10,byrow=TRUE)[(10:1),] ),col=gray((0:128)/128))
+result2 <- optim(par = c(0.1,.15,.25,.5,.8,1.5,.1), fn = fitBindingModel2, data = imageMatrix)
+#	print(result$par)
+#	print(result$value)
+results23 <- rbind(results3,c(result2$par,result2$value))
+# fitBindingModel(result$par,data = imageMatrix, plot = TRUE)
+}
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R')
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R', echo=TRUE)
+results3 <- NULL
+for (versionNum in c(-1,0,1,2,5,6,8,9,11,12,13)){
+dataVersion <- subset(data,data$version == versionNum)
+imageMatrix <- matrix(0,10,10)
+for (rowNum in 1:nrow(dataVersion)){
+horizRespIdx <- dataVersion[rowNum,"resp.h.pos"]+3 + (dataVersion[rowNum,"resp.h.hv"]-1)*5
+vertRespIdx <- dataVersion[rowNum,"resp.v.pos"]+3 + (dataVersion[rowNum,"resp.v.hv"]-1)*5
+imageMatrix[horizRespIdx,vertRespIdx] = imageMatrix[horizRespIdx,vertRespIdx] + 1/nrow(dataVersion)
+}
+#quartz()
+#image(sqrt(matrix(rev(imageMatrix),nrow=10,byrow=TRUE)[(10:1),] ),col=gray((0:128)/128))
+result2 <- optim(par = c(0.1,.15,.25,.5,.8,1.5,.1), fn = fitBindingModel2, data = imageMatrix)
+#	print(result$par)
+#	print(result$value)
+results3 <- rbind(results3,c(result2$par,result2$value))
+# fitBindingModel(result$par,data = imageMatrix, plot = TRUE)
+}
+results3
+result2
+source('~/Google Drive/Vul_Lab/ColorBind/Colorbinding_cory/colorbindingCory/data/basicAna.R')
+results3
+result2$par
+runBindingModel(.12,.16,.36,.25,1.1,1.3,.23)
+runBindingModel(.12,.16,,.16,.36,.36,.25,1.1,1.1,1.3,1.3,.23)
+runBindingModel(.12,.16,,.16,.36,.36,.25,1.1,1.1,1.3,1.3)
+runBindingModel(.12,.16,.16,.36,.36,.25,1.1,1.1,1.3,1.3,.23)

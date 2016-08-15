@@ -1,0 +1,9 @@
+bars-or-spot	3
+nitems	22
+radius	5.3
+ms-st-cue	400
+ms-precue	0
+ms-stimon	1000
+cue-length	3.1
+ntrials	400
+npractice	5

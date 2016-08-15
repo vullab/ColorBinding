@@ -1,0 +1,763 @@
+plot(next_happening,type='l')#
+ lines(cue_on,type='l',col='green')#
+ lines(cue_off,type='l',col='red')#
+ lines(cue_present,type='l',col='blue')
+cue_onset_time = 300#
+cue_offset_time = 700#
+cue_sd = 10#
+#
+strippedConvolve<-function(x,y,zeroForX=1,zeroForY=1){#
+	#output will be on the timescale of x#
+	# # #testing#
+	# x = dnorm(seq(-3,3,.01))#
+	# y = 0 * x#
+	# y[10] = 1#
+	# y=y[1:100]#
+	# plot(strippedConvolve(x,y,1,10),type='l')#
+	# lines(x,col="green")#
+	lenX <- length(x)#
+	lenY <- length(y)#
+	x<-c(x,rep(0,max(lenY-lenX,0)))#
+	y<-c(y,rep(0,max(lenX-lenY,0)))#
+	shifter = (zeroForY+lenY-1)#
+#
+	z <- convolve(x, y,FALSE,type = "o")#
+	#browser()#
+	return(z[(shifter):(shifter+lenX-1)])#
+}#
+t = 1:1000#
+#
+cue_onset_pdf = dnorm(t,cue_onset_time,cue_sd)#
+cue_offset_pdf = dnorm(t,cue_offset_time,cue_sd)#
+#
+cue_duration_mean = 100#
+cue_duration_sd = .2#
+#
+cue_duration_pdf =  dlnorm(t,log(cue_duration_mean),cue_duration_sd)#
+cue_duration_cdf =  plnorm(t,log(cue_duration_mean),cue_duration_sd)#
+#
+prob_new = cue_duration_cdf#
+#
+prob_new = prob_new/sum(prob_new)#
+#
+cue_on = cue_onset_pdf*prob_new#
+#
+cue_on = cue_on/sum(cue_on)#
+#
+cue_off = strippedConvolve(cue_on, cue_duration_pdf)#
+cue_off = cue_off/ sum(cue_off)#
+#
+heaviside <-function(x,a=0){(sign(x-a)+1)/2}#
+#
+cue_present <- strippedConvolve(cue_on, heaviside(c(-t,0,t),0),1,length(t)+1)*strippedConvolve(cue_off, 1-heaviside(c(-t,0,t),0),1,length(t)+1)#
+cue_present = cue_present/ sum(cue_present)#
+#
+next_happening <- strippedConvolve(cue_present,prob_new)#
+ plot(next_happening,type='l')#
+ lines(cue_on,type='l',col='green')#
+ lines(cue_off,type='l',col='red')#
+ lines(cue_present,type='l',col='blue')#
+#
+plot(cue_on,type= 'l');lines(cue_off,col ='red');lines(cue_present,type = 'l')#
+#
+	x = dnorm(seq(-3,3,.01))#
+	y = 0 * x#
+	y[10] = 1#
+	x=x[1:100]#
+	plot(strippedConvolve(x,y,1,10),type='l')#
+	lines(x,col="green")
+cue_onset_time = 300#
+cue_offset_time = 700#
+cue_sd = 10#
+#
+strippedConvolve<-function(x,y,zeroForX=1,zeroForY=1){#
+	#output will be on the timescale of x#
+	# # #testing#
+	# x = dnorm(seq(-3,3,.01))#
+	# y = 0 * x#
+	# y[10] = 1#
+	# y=y[1:100]#
+	# plot(strippedConvolve(x,y,1,10),type='l')#
+	# lines(x,col="green")#
+	lenX <- length(x)#
+	lenY <- length(y)#
+	x<-c(x,rep(0,max(lenY-lenX,0)))#
+	y<-c(y,rep(0,max(lenX-lenY,0)))#
+	shifter = (zeroForY+lenY-1)#
+#
+	z <- convolve(x, y,FALSE,type = "o")#
+	#browser()#
+	return(z[(shifter):(shifter+lenX-1)])#
+}#
+t = 1:1000#
+#
+cue_onset_pdf = dnorm(t,cue_onset_time,cue_sd)#
+cue_offset_pdf = dnorm(t,cue_offset_time,cue_sd)#
+#
+cue_duration_mean = 100#
+cue_duration_sd = .2#
+#
+cue_duration_pdf =  dlnorm(t,log(cue_duration_mean),cue_duration_sd)#
+cue_duration_cdf =  plnorm(t,log(cue_duration_mean),cue_duration_sd)#
+#
+prob_new = cue_duration_cdf#
+#
+prob_new = prob_new/sum(prob_new)#
+#
+cue_on = cue_onset_pdf*prob_new#
+#
+cue_on = cue_on/sum(cue_on)#
+#
+cue_off = strippedConvolve(cue_on, cue_duration_pdf)#
+cue_off = cue_off/ sum(cue_off)#
+#
+heaviside <-function(x,a=0){(sign(x-a)+1)/2}#
+#
+cue_present <- strippedConvolve(cue_on, heaviside(c(-t,0,t),0),1,length(t)+1)*strippedConvolve(cue_off, 1-heaviside(c(-t,0,t),0),1,length(t)+1)#
+cue_present = cue_present/ sum(cue_present)#
+#
+next_happening <- strippedConvolve(cue_present,prob_new)#
+ plot(next_happening,type='l')#
+ lines(cue_on,type='l',col='green')#
+ lines(cue_off,type='l',col='red')#
+ lines(cue_present,type='l',col='blue')#
+#
+plot(cue_on,type= 'l');lines(cue_off,col ='red');lines(cue_present,type = 'l')
+plot(next_happening,type='l')#
+ lines(cue_on,type='l',col='green')#
+ lines(cue_off,type='l',col='red')#
+ lines(cue_present,type='l',col='blue')
+plot(cue_on,type='l',col="green")#
+ lines(next_happening)#
+ lines(cue_off,type='l',col='red')#
+ lines(cue_present,type='l',col='blue')
+mixtureOfGaussians <- rnorm(1000,rnorm(0,10),rnorm(0,10)^2)
+mixtureOfGaussians <- rnorm(1000,rnorm(1,0,10),rnorm(1,0,10)^2)
+plot(mixtureOfGaussians)
+hist(mixtureOfGaussians)
+mixtureOfGaussians <- rnorm(1000,rnorm(1,0,10),rnorm(1,0,10)^2)+rnorm(1000,rnorm(1,0,10),rnorm(1,0,10)^2)+rnorm(1000,rnorm(1,0,10),rnorm(1,0,10)^2)+rnorm(1000,rnorm(1,0,10),rnorm(1,0,10)^2)+rnorm(1000,rnorm(1,0,10),rnorm(1,0,10)^2)
+hist(mixtureOfGaussians)
+hyperMeanMean <- 0 #
+hyperMeanSD <- 100#
+hyperSDMean <- 0#
+hyperSDSD <- 10 #
+mixtureOfGaussians<-NULL#
+#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(1000,rnorm(1,hyperMeanMean,hyperMeanSD),rnorm(1,hyperSDMean,hyperSDSD)^2))
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(1000,rnorm(1,hyperMeanMean,hyperMeanSD),rnorm(1,hyperSDMean,hyperSDSD)^2))
+hist(mixtureOfGaussians)
+?rpoisson
+?ppoisson
+?poisson
+hyperMeanMean <- 0 #
+hyperMeanSD <- 100#
+hyperSDMean <- 0#
+hyperSDSD <- 10 #
+mixtureOfGaussians<-NULL#
+#
+weighting = rpois(1,1000)#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMean,hyperMeanSD),rnorm(1,hyperSDMean,hyperSDSD)^2))
+weighting = rpois(1,1000)#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMean,hyperMeanSD),rnorm(1,hyperSDMean,hyperSDSD)^2))
+hist(mixtureOfGaussians)
+?runif
+hyperMeanMin <- -100#
+hyperMeanMax <- 100#
+hyperSDMean <- 0#
+hyperSDSD <- 10 #
+mixtureOfGaussians<-NULL#
+#
+weighting = rpois(1,1000)#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))
+weighting = rpois(1,1000)#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))
+mixtureOfGaussians<-NULL#
+#
+weighting = rpois(1,1000)#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))
+hist(mixtureOfGaussians)
+hyperMeanMin <- -100#
+hyperMeanMax <- 100#
+hyperSDMean <- 0#
+hyperSDSD <- 1 #
+mixtureOfGaussians<-NULL#
+#
+weighting = rpois(1,1000)#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))
+hist(mixtureOfGaussians)
+weighting = rpois(1,1000)#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))
+hist(mixtureOfGaussians)
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,1000)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}
+hyperMeanMin <- -100#
+hyperMeanMax <- 100#
+hyperSDMean <- 0#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 5#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,1000)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}
+hist(mixtureOfGaussians)
+hyperMeanMin <- -100#
+hyperMeanMax <- 100#
+hyperSDMean <- .5#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 7#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,1000)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}#
+hist(mixtureOfGaussians)
+hyperMeanMin <- -100#
+hyperMeanMax <- 100#
+hyperSDMean <- .5#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 7#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,10000)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}#
+hist(mixtureOfGaussians)
+hyperMeanMin <- -100#
+hyperMeanMax <- 100#
+hyperSDMean <- .5#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 7#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,100)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}#
+hist(mixtureOfGaussians)
+hyperMeanMin <- -500#
+hyperMeanMax <- 500#
+hyperSDMean <- .5#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 7#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,100)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}#
+hist(mixtureOfGaussians)
+plot(density(mixtureOfGaussians))
+hyperMeanMin <- -500#
+hyperMeanMax <- 500#
+hyperSDMean <- .5#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 7#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,100)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}#
+plot(density(mixtureOfGaussians))
+?density
+plot(density(mixtureOfGaussians, adjust=.8))
+plot(density(mixtureOfGaussians, adjust=.2))
+plot(density(mixtureOfGaussians, adjust=.6))
+plot(density(mixtureOfGaussians, adjust=.5))
+plot(density(mixtureOfGaussians, adjust=1))
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(100,650,10)#
+#
+plot(density(mixtureOfGaussians, adjust=1))
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(100,650,10))#
+#
+plot(density(mixtureOfGaussians, adjust=1))
+hyperMeanMin <- -500#
+hyperMeanMax <- 500#
+hyperSDMean <- .5#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 7#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,100)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}#
+#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(50,700,10))#
+#
+plot(density(mixtureOfGaussians, adjust=1))
+hyperMeanMin <- -500#
+hyperMeanMax <- 500#
+hyperSDMean <- .5#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 7#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,100)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}#
+#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(25,700,10))#
+#
+plot(density(mixtureOfGaussians, adjust=1))
+hyperMeanMin <- -500#
+hyperMeanMax <- 500#
+hyperSDMean <- .5#
+hyperSDSD <- 2 #
+mixtureOfGaussians<-NULL#
+nGaussians <- 7#
+#
+for (i in 1:nGaussians){#
+#
+	weighting = rpois(1,100)#
+	mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(weighting,runif(1,hyperMeanMin,hyperMeanMax),rnorm(1,hyperSDMean,hyperSDSD)^2))#
+}#
+#
+mixtureOfGaussians <- c(mixtureOfGaussians,rnorm(25,700,5))#
+#
+plot(density(mixtureOfGaussians, adjust=1))
+den
+den <- density(mixtureOfGaussians, adjust=1)
+den
+str(den)
+den$y
+plot(den$y)
+plot(cumsum(den$y))
+den$y<-sum(den$y)
+den <- density(mixtureOfGaussians, adjust=1)
+den$y<-den$y/sum(den$y)
+plot(den$y)
+plot(cumsum(den$y))
+runif
+runif()
+runif(1)
+runif(1)>den$y
+runif(1)>cumsum(den$y)
+last(runif(1)>cumsum(den$y))
+which(runif(1)>cumsum(den$y)
+)
+which.max(runif(1)>cumsum(den$y))
+max(which(runif(1)>cumsum(den$y)))
+den$x[max(which(runif(1)>cumsum(den$y)))]
+den$x[max(which(runif(nsamples)>cumsum(den$y)))]
+nsamples<- 1000#
+plot(den$x[max(which(runif(nsamples)>cumsum(den$y)))],type='l')
+nsamples<- 1000#
+sampleDen<-NULL#
+for (i in 1:nSamples){#
+sampleDen<-c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])#
+}#
+#
+hist(sampleDen)
+den$x[max(which(runif(1)>cumsum(den$y)))
+]
+c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])
+sampleDen
+nSamples<- 1000#
+sampleDen<-NULL#
+for (i in 1:nSamples){#
+sampleDen<-c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])#
+}#
+#
+hist(sampleDen)
+nSamples<- 500#
+sampleDen<-NULL#
+for (i in 1:nSamples){#
+sampleDen<-c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])#
+}#
+#
+hist(sampleDen)
+nSamples<- 50#
+sampleDen<-NULL#
+for (i in 1:nSamples){#
+sampleDen<-c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])#
+}#
+#
+hist(sampleDen)
+?hist
+plot(density(mixtureOfGaussians, adjust=1))
+hist(sampleDen, xlim= -400,ylim = 850, breaks = seq(-400,850,25))
+hist(sampleDen, xlim= c(-400,850), breaks = seq(-400,850,25))
+hist(sampleDen, xlim= c(-400,850), breaks = seq(-400,850,50))
+nSamples<- 50#
+sampleDen<-NULL#
+for (i in 1:nSamples){#
+sampleDen<-c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])#
+}#
+#
+hist(sampleDen, xlim= c(-400,850), breaks = seq(-400,850,50))
+nSamples<- 25#
+sampleDen<-NULL#
+for (i in 1:nSamples){#
+sampleDen<-c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])#
+}#
+#
+hist(sampleDen, xlim= c(-400,850), breaks = seq(-400,850,50))
+plot(density(mixtureOfGaussians, adjust=1))
+nSamples<- 10000#
+sampleDen<-NULL#
+for (i in 1:nSamples){#
+sampleDen<-c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])#
+}#
+#
+hist(sampleDen, xlim= c(-400,850), breaks = seq(-400,850,50))
+nSamples<- 50#
+sampleDen<-NULL#
+for (i in 1:nSamples){#
+sampleDen<-c(sampleDen,den$x[max(which(runif(1)>cumsum(den$y)))])#
+}#
+#
+hist(sampleDen, xlim= c(-400,850), breaks = seq(-400,850,50))
+plot(density(mixtureOfGaussians, adjust=1))
+lines(dnorm(seq(-400,700),mean = 190,sd = 10),col='red')
+lines(,seq(-400,700),.5*dnorm(seq(-400,700),mean = 190,sd = 10),col='red')
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 190,sd = 10),col='red')
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 190,sd = 100),col='red')
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')
+lines(seq(-400,700),.1*dnorm(seq(-400,700),mean = 700,sd = 10),col='red')
+lines(seq(-400,850),.1*dnorm(seq(-400,850),mean = 700,sd = 10),col='red')
+lines(seq(-400,850),.1*dnorm(seq(-400,850),mean = 700,sd = 30),col='red')
+lines(seq(-400,850),.05*dnorm(seq(-400,850),mean = 700,sd = 30),col='red')
+lines(seq(-400,850),.025*dnorm(seq(-400,850),mean = 700,sd = 30),col='red')
+plot(density(mixtureOfGaussians, adjust=1))#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')#
+lines(seq(-400,850),.025*dnorm(seq(-400,850),mean = 700,sd = 30),col='red')
+lines(seq(-400,850),.025*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')
+plot(density(mixtureOfGaussians, adjust=1))#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')#
+lines(seq(-400,850),.025*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')
+lines(seq(-400,850),.3*dnorm(seq(-400,850),mean = 400,sd = 80),col='red')
+lines(seq(-400,850),.2*dnorm(seq(-400,850),mean = 380,sd = 80),col='red')
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = 380,sd = 80),col='red')
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = 380,sd = 70),col='red')
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = 380,sd = 60),col='red')
+plot(density(mixtureOfGaussians, adjust=1))#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')#
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = 380,sd = 60),col='red')
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = 380,sd = 60),col='red')
+plot(density(mixtureOfGaussians, adjust=1))#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')#
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = 380,sd = 60),col='red')
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = -100,sd = 100),col='red')
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = -80,sd = 100),col='red')
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = -60,sd = 100),col='red')
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = -40,sd = 100),col='red')
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = -20,sd = 100),col='red')
+lines(seq(-400,850),.6*dnorm(seq(-400,850),mean = -20,sd = 100),col='red')
+lines(seq(-400,850),.4*dnorm(seq(-400,850),mean = -20,sd = 100),col='red')
+lines(seq(-400,850),.5*dnorm(seq(-400,850),mean = -20,sd = 100),col='red')
+plot(density(mixtureOfGaussians, adjust=1))#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')#
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = 380,sd = 60),col='red')#
+lines(seq(-400,850),.5*dnorm(seq(-400,850),mean = -20,sd = 100),col='red')
+lines(seq(-400,850),.2*dnorm(seq(-400,850),mean = -220,sd = 100),col='red')
+lines(seq(-400,850),.2*dnorm(seq(-400,850),mean = -220,sd = 80),col='red')
+lines(seq(-400,850),.2*dnorm(seq(-400,850),mean = -220,sd = 70),col='red')
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = -220,sd = 70),col='red')
+plot(density(mixtureOfGaussians, adjust=1))#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')#
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = 380,sd = 60),col='red')#
+lines(seq(-400,850),.5*dnorm(seq(-400,850),mean = -20,sd = 100),col='red')#
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = -220,sd = 70),col='red')
+plot(density(mixtureOfGaussians, adjust=1),color="gray20")
+plot(density(mixtureOfGaussians, adjust=1),color="gray80")
+plot(density(mixtureOfGaussians, adjust=1),color="gray10")
+plot(density(mixtureOfGaussians, adjust=1),col="gray10")
+plot(density(mixtureOfGaussians, adjust=1),col="gray90")
+plot(density(mixtureOfGaussians, adjust=1),col="gray80")
+plot(density(mixtureOfGaussians, adjust=1),col="gray70")
+plot(density(mixtureOfGaussians, adjust=1),col="gray70")#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')#
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = 380,sd = 60),col='red')#
+lines(seq(-400,850),.5*dnorm(seq(-400,850),mean = -20,sd = 100),col='red')#
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = -220,sd = 70),col='red')
+plot(density(mixtureOfGaussians, adjust=1),col="gray60")#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 90),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')#
+lines(seq(-400,850),.15*dnorm(seq(-400,850),mean = 380,sd = 60),col='red')#
+lines(seq(-400,850),.5*dnorm(seq(-400,850),mean = -20,sd = 100),col='red')#
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = -220,sd = 70),col='red')
+plot(density(mixtureOfGaussians, adjust=1),col="gray60")#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 140),col='red')#
+lines(seq(-400,850),.18*dnorm(seq(-400,850),mean = -220,sd = 70),col='red')
+plot(density(mixtureOfGaussians, adjust=1),col="gray60")#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 180,sd = 140),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')
+plot(density(mixtureOfGaussians, adjust=1),col="gray60")#
+lines(seq(-400,700),.5*dnorm(seq(-400,700),mean = 50,sd = 180),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')
+plot(density(mixtureOfGaussians, adjust=1),col="gray60")#
+lines(seq(-400,700),.8*dnorm(seq(-400,700),mean = 50,sd = 180),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')
+plot(density(mixtureOfGaussians, adjust=1),col="gray60")#
+lines(seq(-400,700),.85*dnorm(seq(-400,700),mean = 50,sd = 180),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')
+plot(density(mixtureOfGaussians, adjust=1),col="gray60")#
+lines(seq(-400,700),.9*dnorm(seq(-400,700),mean = 50,sd = 180),col='red')#
+lines(seq(-400,850),.028*dnorm(seq(-400,850),mean = 700,sd = 40),col='red')
+data<-NULL#
+#
+for (file in list.files())#
+#
+if ("1"==substr(file,nchar(file)-4,nchar(file)-4)){#
+	subjMain <- read.csv(file)#
+	if (nrow(subjMain)==subjMain$ntrials[1]){#
+		subjectName <- substr(file,7,nchar(file)-6)#
+		subjMain$subjectID <- subjectName#
+		data<-rbind(data,subjMain)#
+	}#
+}#
+#
+data$outerCorrect <- data$resp.h.pos==0 & data$resp.h.hv==1#
+data$innerCorrect <- data$resp.v.pos==0 & data$resp.v.hv==2#
+#
+data$anyCorrect <- data$outerCorrect | data$innerCorrect#
+data$allCorrect <- data$outerCorrect & data$innerCorrect#
+#
+data$outerResp.outer.minus2 <- data$resp.h.pos==-2 & data$resp.h.hv==1#
+data$outerResp.outer.minus1 <- data$resp.h.pos==-1 & data$resp.h.hv==1#
+data$outerResp.outer.0 <- data$resp.h.pos==0 & data$resp.h.hv==1 #correct#
+data$outerResp.outer.plus1 <- data$resp.h.pos==1 & data$resp.h.hv==1#
+data$outerResp.outer.plus2 <- data$resp.h.pos==2 & data$resp.h.hv==1#
+#
+data$outerResp.inner.minus2 <- data$resp.h.pos==-2 & data$resp.h.hv==2#
+data$outerResp.inner.minus1 <- data$resp.h.pos==-1 & data$resp.h.hv==2#
+data$outerResp.inner.0 <- data$resp.h.pos==0 & data$resp.h.hv==2#
+data$outerResp.inner.plus1 <- data$resp.h.pos==1 & data$resp.h.hv==2#
+data$outerResp.inner.plus2 <- data$resp.h.pos==2 & data$resp.h.hv==2#
+#
+data$innerResp.outer.minus2 <- data$resp.v.pos==-2 & data$resp.v.hv==1#
+data$innerResp.outer.minus1 <- data$resp.v.pos==-1 & data$resp.v.hv==1#
+data$innerResp.outer.0 <- data$resp.v.pos==0 & data$resp.v.hv==1#
+data$innerResp.outer.plus1 <- data$resp.v.pos==1 & data$resp.v.hv==1#
+data$innerResp.outer.plus2 <- data$resp.v.pos==2 & data$resp.v.hv==1#
+#
+data$innerResp.inner.minus2 <- data$resp.v.pos==-2 & data$resp.v.hv==2#
+data$innerResp.inner.minus1 <- data$resp.v.pos==-1 & data$resp.v.hv==2#
+data$innerResp.inner.0 <- data$resp.v.pos==0 & data$resp.v.hv==2 #correct#
+data$innerResp.inner.plus1 <- data$resp.v.pos==1 & data$resp.v.hv==2#
+data$innerResp.inner.plus2 <- data$resp.v.pos==2 & data$resp.v.hv==2#
+#
+#matching objects at each position#
+#
+data$CorrectObjectMatching.minus2 <- data$outerResp.outer.minus2 & data$innerResp.inner.minus2#
+data$CorrectObjectMatching.minus1 <- data$outerResp.outer.minus1 & data$innerResp.inner.minus1#
+data$CorrectObjectMatching.0 <- data$outerResp.outer.0 & data$innerResp.inner.0#
+data$CorrectObjectMatching.plus1 <- data$outerResp.outer.plus1 & data$innerResp.inner.plus1#
+data$CorrectObjectMatching.plus2 <- data$outerResp.outer.plus2 & data$innerResp.inner.plus2#
+#
+data$FlippedObjectMatching.minus2 <- data$outerResp.inner.minus2 & data$innerResp.outer.minus2#
+data$FlippedObjectMatching.minus1 <- data$outerResp.inner.minus1 & data$innerResp.outer.minus1#
+data$FlippedObjectMatching.0 <- data$outerResp.inner.0 & data$innerResp.outer.0#
+data$FlippedObjectMatching.plus1 <- data$outerResp.inner.plus1 & data$innerResp.outer.plus1#
+data$FlippedObjectMatching.plus2 <- data$outerResp.inner.plus2 & data$innerResp.outer.plus2#
+#
+#how often do they correctly match objects at incorrect positions#
+#
+data$CorrectMatchingOnIncorrectTrials <- data$CorrectObjectMatching.minus2 | data$CorrectObjectMatching.minus1 |data$CorrectObjectMatching.0 | data$CorrectObjectMatching.plus1 | data$CorrectObjectMatching.plus2#
+#
+data$FlippedMatchingOnIncorrectTrials <- data$FlippedObjectMatching.minus2 | data$FlippedObjectMatching.minus1 | data$FlippedObjectMatching.plus1 | data$FlippedObjectMatching.plus2#
+#
+#matched at all on incorrect trials#
+#
+data$AnyMatchingOnIncorrectTrials <- data$FlippedMatchingOnIncorrectTrials | data$CorrectMatchingOnIncorrectTrials
+sum(data$AnyMatchingOnIncorrectTrials)
+sum(data$CorrectMatchingOnIncorrectTrials)
+sum(data$CorrectMatchingOnIncorrectTrials)/sum(data$AnyMatchingOnIncorrectTrials)
+data[1,]
+nrow(Data)
+nrow(data)
+sum(data$FlippedMatchingOnIncorrectTrials)
+level(data$subejctID)
+level(data$subjectID)
+levels(data$subjectID)
+unique(data$subjectID)
+data$resp.h.pos
+data$resp.h.hv
+sum(data$FlippedObjectMatching.0)
+sum(data$CorrectObjectMatching.0)
+data$CorrectMatchingOnIncorrectTrials <- data$CorrectObjectMatching.minus2 | data$CorrectObjectMatching.minus1| data$CorrectObjectMatching.plus1 | data$CorrectObjectMatching.plus2#
+#
+data$FlippedMatchingOnIncorrectTrials <- data$FlippedObjectMatching.minus2 | data$FlippedObjectMatching.minus1 | data$FlippedObjectMatching.plus1 | data$FlippedObjectMatching.plus2#
+#
+#matched at all on incorrect trials#
+#
+data$AnyMatchingOnIncorrectTrials <- data$FlippedMatchingOnIncorrectTrials | data$CorrectMatchingOnIncorrectTrials
+sum(data$FlippedMatchingOnIncorrectTrials)
+sum(data$CorrectMatchingOnIncorrectTrials)/sum(data$AnyMatchingOnIncorrectTrials)
+nrows(data)
+nrow(data)
+sum(data$AnyMatchingOnIncorrectTrials)
+611/nrow(data)
+data<-NULL#
+#
+for (file in list.files())#
+#
+if ("1"==substr(file,nchar(file)-4,nchar(file)-4)){#
+	subjMain <- read.csv(file)#
+	if (nrow(subjMain)==subjMain$ntrials[1]){#
+		subjectName <- substr(file,7,nchar(file)-6)#
+		subjMain$subjectID <- subjectName#
+		data<-rbind(data,subjMain)#
+	}#
+}#
+#
+data$outerCorrect <- data$resp.h.pos==0 & data$resp.h.hv==1#
+data$innerCorrect <- data$resp.v.pos==0 & data$resp.v.hv==2#
+#
+data$anyCorrect <- data$outerCorrect | data$innerCorrect#
+data$allCorrect <- data$outerCorrect & data$innerCorrect#
+#
+data$outerResp.outer.minus2 <- data$resp.h.pos==-2 & data$resp.h.hv==1#
+data$outerResp.outer.minus1 <- data$resp.h.pos==-1 & data$resp.h.hv==1#
+data$outerResp.outer.0 <- data$resp.h.pos==0 & data$resp.h.hv==1 #correct#
+data$outerResp.outer.plus1 <- data$resp.h.pos==1 & data$resp.h.hv==1#
+data$outerResp.outer.plus2 <- data$resp.h.pos==2 & data$resp.h.hv==1#
+#
+data$outerResp.inner.minus2 <- data$resp.h.pos==-2 & data$resp.h.hv==2#
+data$outerResp.inner.minus1 <- data$resp.h.pos==-1 & data$resp.h.hv==2#
+data$outerResp.inner.0 <- data$resp.h.pos==0 & data$resp.h.hv==2#
+data$outerResp.inner.plus1 <- data$resp.h.pos==1 & data$resp.h.hv==2#
+data$outerResp.inner.plus2 <- data$resp.h.pos==2 & data$resp.h.hv==2#
+#
+data$innerResp.outer.minus2 <- data$resp.v.pos==-2 & data$resp.v.hv==1#
+data$innerResp.outer.minus1 <- data$resp.v.pos==-1 & data$resp.v.hv==1#
+data$innerResp.outer.0 <- data$resp.v.pos==0 & data$resp.v.hv==1#
+data$innerResp.outer.plus1 <- data$resp.v.pos==1 & data$resp.v.hv==1#
+data$innerResp.outer.plus2 <- data$resp.v.pos==2 & data$resp.v.hv==1#
+#
+data$innerResp.inner.minus2 <- data$resp.v.pos==-2 & data$resp.v.hv==2#
+data$innerResp.inner.minus1 <- data$resp.v.pos==-1 & data$resp.v.hv==2#
+data$innerResp.inner.0 <- data$resp.v.pos==0 & data$resp.v.hv==2 #correct#
+data$innerResp.inner.plus1 <- data$resp.v.pos==1 & data$resp.v.hv==2#
+data$innerResp.inner.plus2 <- data$resp.v.pos==2 & data$resp.v.hv==2#
+#
+#matching objects at each position#
+#
+data$CorrectObjectMatching.minus2 <- data$outerResp.outer.minus2 & data$innerResp.inner.minus2#
+data$CorrectObjectMatching.minus1 <- data$outerResp.outer.minus1 & data$innerResp.inner.minus1#
+data$CorrectObjectMatching.0 <- data$outerResp.outer.0 & data$innerResp.inner.0#
+data$CorrectObjectMatching.plus1 <- data$outerResp.outer.plus1 & data$innerResp.inner.plus1#
+data$CorrectObjectMatching.plus2 <- data$outerResp.outer.plus2 & data$innerResp.inner.plus2#
+#
+data$FlippedObjectMatching.minus2 <- data$outerResp.inner.minus2 & data$innerResp.outer.minus2#
+data$FlippedObjectMatching.minus1 <- data$outerResp.inner.minus1 & data$innerResp.outer.minus1#
+data$FlippedObjectMatching.0 <- data$outerResp.inner.0 & data$innerResp.outer.0#
+data$FlippedObjectMatching.plus1 <- data$outerResp.inner.plus1 & data$innerResp.outer.plus1#
+data$FlippedObjectMatching.plus2 <- data$outerResp.inner.plus2 & data$innerResp.outer.plus2#
+#
+#how often do they correctly match objects at incorrect positions#
+#
+data$CorrectMatchingOnIncorrectTrials <- data$CorrectObjectMatching.minus2 | data$CorrectObjectMatching.minus1| data$CorrectObjectMatching.plus1 | data$CorrectObjectMatching.plus2#
+#
+data$FlippedMatchingOnIncorrectTrials <- data$FlippedObjectMatching.minus2 | data$FlippedObjectMatching.minus1 | data$FlippedObjectMatching.plus1 | data$FlippedObjectMatching.plus2#
+#
+#matched at all on incorrect trials#
+#
+data$AnyMatchingOnIncorrectTrials <- data$FlippedMatchingOnIncorrectTrials | data$CorrectMatchingOnIncorrectTrials
+sum(data$CorrectMatchingOnIncorrectTrials)/sum(data$AnyMatchingOnIncorrectTrials)
+sum(data$AnyMatchingOnIncorrectTrials)/nrow(data)
+dataAggr<-aggregate(data=data, c(AnyMatchingOnIncorrectTrials,FlippedMatchingOnIncorrectTrials,CorrectMatchingOnIncorrectTrials)~subjectID,sum)
+(AnyMatchingOnIncorrectTrials,FlippedMatchingOnIncorrectTrials,CorrectMatchingOnIncorrectTrials)~subjMain,sum)
+dataAggr<-aggregate(data=data, c(AnyMatchingOnIncorrectTrials,FlippedMatchingOnIncorrectTrials,CorrectMatchingOnIncorrectTrials)~subjMain,sum)
+colnames(data)
+dataAggr<-aggregate(data=data, c(AnyMatchingOnIncorrectTrials,FlippedMatchingOnIncorrectTrials,CorrectMatchingOnIncorrectTrials)~subjectID,sum)
+dataAggr<-aggregate(data=data, cbind(AnyMatchingOnIncorrectTrials,FlippedMatchingOnIncorrectTrials,CorrectMatchingOnIncorrectTrials)~subjectID,sum)
+dataAggr
+dataAggr$CorrectMatchingOnIncorrectTrials/dataAggr$AnyMatchingOnIncorrectTrials
+hist(dataAggr$CorrectMatchingOnIncorrectTrials/dataAggr$AnyMatchingOnIncorrectTrials)
+data<-NULL#
+#
+for (file in list.files())#
+#
+if ("1"==substr(file,nchar(file)-4,nchar(file)-4)){#
+	subjMain <- read.csv(file)#
+	if (nrow(subjMain)==subjMain$ntrials[1]){#
+		subjectName <- substr(file,7,nchar(file)-6)#
+		subjMain$subjectID <- subjectName#
+		data<-rbind(data,subjMain)#
+	}#
+}#
+#
+data$outerCorrect <- data$resp.h.pos==0 & data$resp.h.hv==1#
+data$innerCorrect <- data$resp.v.pos==0 & data$resp.v.hv==2#
+#
+data$anyCorrect <- data$outerCorrect | data$innerCorrect#
+data$allCorrect <- data$outerCorrect & data$innerCorrect#
+#
+data$outerResp.outer.minus2 <- data$resp.h.pos==-2 & data$resp.h.hv==1#
+data$outerResp.outer.minus1 <- data$resp.h.pos==-1 & data$resp.h.hv==1#
+data$outerResp.outer.0 <- data$resp.h.pos==0 & data$resp.h.hv==1 #correct#
+data$outerResp.outer.plus1 <- data$resp.h.pos==1 & data$resp.h.hv==1#
+data$outerResp.outer.plus2 <- data$resp.h.pos==2 & data$resp.h.hv==1#
+#
+data$outerResp.inner.minus2 <- data$resp.h.pos==-2 & data$resp.h.hv==2#
+data$outerResp.inner.minus1 <- data$resp.h.pos==-1 & data$resp.h.hv==2#
+data$outerResp.inner.0 <- data$resp.h.pos==0 & data$resp.h.hv==2#
+data$outerResp.inner.plus1 <- data$resp.h.pos==1 & data$resp.h.hv==2#
+data$outerResp.inner.plus2 <- data$resp.h.pos==2 & data$resp.h.hv==2#
+#
+data$innerResp.outer.minus2 <- data$resp.v.pos==-2 & data$resp.v.hv==1#
+data$innerResp.outer.minus1 <- data$resp.v.pos==-1 & data$resp.v.hv==1#
+data$innerResp.outer.0 <- data$resp.v.pos==0 & data$resp.v.hv==1#
+data$innerResp.outer.plus1 <- data$resp.v.pos==1 & data$resp.v.hv==1#
+data$innerResp.outer.plus2 <- data$resp.v.pos==2 & data$resp.v.hv==1#
+#
+data$innerResp.inner.minus2 <- data$resp.v.pos==-2 & data$resp.v.hv==2#
+data$innerResp.inner.minus1 <- data$resp.v.pos==-1 & data$resp.v.hv==2#
+data$innerResp.inner.0 <- data$resp.v.pos==0 & data$resp.v.hv==2 #correct#
+data$innerResp.inner.plus1 <- data$resp.v.pos==1 & data$resp.v.hv==2#
+data$innerResp.inner.plus2 <- data$resp.v.pos==2 & data$resp.v.hv==2#
+#
+#matching objects at each position#
+#
+data$CorrectObjectMatching.minus2 <- data$outerResp.outer.minus2 & data$innerResp.inner.minus2#
+data$CorrectObjectMatching.minus1 <- data$outerResp.outer.minus1 & data$innerResp.inner.minus1#
+data$CorrectObjectMatching.0 <- data$outerResp.outer.0 & data$innerResp.inner.0#
+data$CorrectObjectMatching.plus1 <- data$outerResp.outer.plus1 & data$innerResp.inner.plus1#
+data$CorrectObjectMatching.plus2 <- data$outerResp.outer.plus2 & data$innerResp.inner.plus2#
+#
+data$FlippedObjectMatching.minus2 <- data$outerResp.inner.minus2 & data$innerResp.outer.minus2#
+data$FlippedObjectMatching.minus1 <- data$outerResp.inner.minus1 & data$innerResp.outer.minus1#
+data$FlippedObjectMatching.0 <- data$outerResp.inner.0 & data$innerResp.outer.0#
+data$FlippedObjectMatching.plus1 <- data$outerResp.inner.plus1 & data$innerResp.outer.plus1#
+data$FlippedObjectMatching.plus2 <- data$outerResp.inner.plus2 & data$innerResp.outer.plus2#
+#
+#how often do they correctly match objects at incorrect positions#
+#
+data$CorrectMatchingOnIncorrectTrials <- data$CorrectObjectMatching.minus2 | data$CorrectObjectMatching.minus1| data$CorrectObjectMatching.plus1 | data$CorrectObjectMatching.plus2#
+#
+data$FlippedMatchingOnIncorrectTrials <- data$FlippedObjectMatching.minus2 | data$FlippedObjectMatching.minus1 | data$FlippedObjectMatching.plus1 | data$FlippedObjectMatching.plus2#
+#
+#matched at all on incorrect trials#
+#
+data$AnyMatchingOnIncorrectTrials <- data$FlippedMatchingOnIncorrectTrials | data$CorrectMatchingOnIncorrectTrials#
+#
+sum(data$CorrectMatchingOnIncorrectTrials)/sum(data$AnyMatchingOnIncorrectTrials)#
+sum(data$AnyMatchingOnIncorrectTrials)/nrow(data)#
+#
+dataAggr<-aggregate(data=data, cbind(AnyMatchingOnIncorrectTrials,FlippedMatchingOnIncorrectTrials,CorrectMatchingOnIncorrectTrials)~subjectID,sum)#
+#
+hist(dataAggr$CorrectMatchingOnIncorrectTrials/dataAggr$AnyMatchingOnIncorrectTrials)
