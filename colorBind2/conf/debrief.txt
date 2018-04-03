@@ -1,8 +1,0 @@
-All done! 
-
-In this experiment we are measuring the mistakes that people make when 
-trying to bind color to a location, and how this interacts with the shape 
-and size of objects. We hope this will inform our understanding of how the 
-mind connects different properties of objects like color and shape. 
-
-Thanks for participating!

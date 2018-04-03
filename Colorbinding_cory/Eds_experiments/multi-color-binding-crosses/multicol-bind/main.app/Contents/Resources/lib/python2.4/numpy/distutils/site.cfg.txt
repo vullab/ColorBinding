@@ -1,3 +1,0 @@
-[atlas]
-library_dirs = /usr/lib/atlas/3dnow/
-atlas_libs = lapack, blas
