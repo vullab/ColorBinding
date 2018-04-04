@@ -4,13 +4,11 @@
 
 three families of experiments:
 
-* sequential selection: pick color of one part (from array of 10 colors), then the next
+* sequential selection: pick color of one part (from array of 10 colors), then pick color of next part
 * simultaneous selection: pick conjunction from 10x10 grid combining all parts and colors
 * visual-search: identify one part among distracters of the other part (all monochrome)
 
-## 1. sequential-selection: Cory's sequential selection version
-
-#### methods:
+## sequential-selection methods
 
 cue appears 400 ms before display of objects
 
@@ -26,33 +24,28 @@ cued target item and the 4 items on either side of it (2 clockwise, 2 counterclo
 
 Test: pick which color went with part A (e.g., vertical bar) out of 10 options, ditto for part B. (which part cued first is random)
 
-#### summary of subjects/trials:
-
-| version| min.trials| max.trials| subjects|description                                           |
-|-------:|----------:|----------:|--------:|:-----------------------------------------------------|
-|       9|        300|        400|       37|non rotating Ts                                       |
-|      13|        300|        400|       34|box outlines                                          |
-|       6|        300|        400|       32|stacked boxes                                         |
-|       5|        300|        400|       30|Ts that rotate around the display                     |
-|       8|        300|        400|       30|dots and boxes (2x2 grid of circles and squares.)     |
-|       2|        300|        500|       28|moons (offset bulls eyes with the middle popping out) |
-|      -1|        450|        500|       27|Original Crosses                                      |
-|       1|        300|        500|       27|eggs (offset bulls eyes)                              |
-|      11|        300|        400|       25|boxes with a gap                                      |
-|       0|        500|        500|       24|OG bulls eyes                                         |
-|      12|        300|        400|       24|crosses that overlap                                  |
-|       3|        300|        400|        4|played with size A (abandoned)                        |
-|       4|        400|        400|        3|played with size B (abandoned)                        |
-|      10|        300|        400|        2|stacked Ts (abandoned)                                |
-|       7|        400|        400|        1|windows (2x2 boxes, abandoned)                        |
-
-
-## 2. simultaneous-selection:  Tim's version where people select an option from a grid, to eliminate repeated guessing
-
-#### methods: 
+## simultaneous-selection methods 
 
 same as simultaneous selection, except during test, subject pick out an object conjunction out of a 10x10 grid which includes every color combination.
 
-#### summary of subjects/trials:
+## summary of subjects/trials:
 
-* visual-search: Visual search task on the different parts of the objects
+|description                    |sequential       |simultaneous     |
+|:------------------------------|:----------------|:----------------|
+|(abandoned) 2x2 (box)          |1 (400-400 tpp)  |NA               |
+|(abandoned) played with size A |4 (300-400 tpp)  |1 (400-400 tpp)  |
+|(abandoned) played with size B |3 (400-400 tpp)  |1 (400-400 tpp)  |
+|(abandoned) T (stacked)        |2 (300-400 tpp)  |NA               |
+|2x1 (+gap)                     |25 (300-400 tpp) |26 (345-400 tpp) |
+|2x2                            |30 (300-400 tpp) |25 (161-400 tpp) |
+|box (2x1 -gap)                 |32 (300-400 tpp) |17 (400-400 tpp) |
+|cross (-gap)                   |24 (300-400 tpp) |25 (400-400 tpp) |
+|cross (+gap)                   |27 (450-500 tpp) |24 (400-400 tpp) |
+|frame                          |34 (300-400 tpp) |24 (400-400 tpp) |
+|T (fixed)                      |37 (300-400 tpp) |25 (289-400 tpp) |
+|T (rotate)                     |30 (300-400 tpp) |18 (400-400 tpp) |
+|target (circ)                  |24 (500-500 tpp) |26 (400-400 tpp) |
+|target (egg)                   |28 (135-500 tpp) |26 (400-400 tpp) |
+|target (moon)                  |28 (300-500 tpp) |26 (400-400 tpp) |
+
+## visual-search: Visual search task on the different parts of the objects
