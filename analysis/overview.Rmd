@@ -1,0 +1,638 @@
+---
+title: "Hierarchical Binding Overview"
+author: "Ed Vul"
+date: "4/6/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, cache = FALSE)
+
+library(tidyverse)
+
+RELOAD = F
+DEBUG = F
+
+version.code = c(
+  '-1' = 'cross (+gap)',
+  '0' = 'target (circ)',
+  '1' = "target (egg)",
+  '2'  = "target (moon)",
+  '5' = 'T (rotate)',
+  '6' = '2x1 (-gap)',
+  '8' = '2x2', 
+  '9'  = 'T (fixed)',
+  '11' = '2x1 (+gap)',
+  '12' = 'cross (-gap)',
+  '13' = 'frame',
+  '3' = '(abandoned) played with size A',
+  '4' = '(abandoned) played with size B',
+  '7' = '(abandoned) 2x2 (box)',
+  '10' = '(abandoned) T (stacked)')
+
+r.labels = c('A -2', 'A -1', 'A  0', 'A +1', 'A +2',
+             'B -2', 'B -1', 'B  0', 'B +1', 'B +2')
+
+# load data
+source('load.data.R')
+```
+
+## overview:
+
+three families of experiments:
+
+* sequential selection: pick color of one part (from array of 10 colors), then pick color of next part  
+* simultaneous selection: pick conjunction from 10x10 grid combining all parts and colors  
+* visual-search: identify one part among distracters of the other part (all monochrome)  
+
+## binding experiments (simultaneous & sequential)
+
+### general methods
+
+fixation: 400 ms
+
+trial display: 100 ms
+
+trial display includes  
+- circle (~5 degrees from fixation) of 22 evenly spaced objects  
+- line cueing target object (extending ~3 degrees from fixation toward target object)  
+
+objects are all comprised of two colored parts.  cued target object and the 4 objects on either side of it (2 clockwise, 2 counterclockwise) have entirely unique colors for all parts (thus 10 unique colors)
+
+object configuration varies across expt versions.  
+
+Response: 
+- pick which of 10 unique colors went with part A and part B of the target object  
+- **sequential** pick part A color, then part B color (color order and part order randomized across trials)  
+- **simultaneous**  pick an object conjunction out of a 10x10 grid which includes every combination of the 10 colors for each of the two parts (excluding those combinations with repeated colors; color order in grid randomized across trials).
+
+## binding experiment version summaries
+
+showing number of subjects, and range of number of trials/subject.  
+
+```{r summary}
+## version summary (number of subjects, etc.)
+source('version.summary.R')
+
+version.summary %>% 
+  mutate(textsum = paste0('N: ', subjects, '; T/S: ', min.trials, '-', max.trials, '; acc: ', round(100*mean.accuracy), "%")) %>%
+  select(experiment, description, textsum) %>%
+  arrange(experiment, description) %>%
+  spread(key = experiment, value = textsum) %>%
+  knitr::kable()
+```
+
+henceforth, we are not mentioning the 'abandoned' object types.
+
+## results 
+
+### heatmaps:
+
+This shows the frequency with which each color conjunction is selected.  Object types are sorted from easiest (highest accuracy) to hardest.  Note: in sequential task, hard object types yield very high rates of repetitions (same color reported for both parts).
+
+```{r heatmaps, fig.width=10, fig.height=3.8}
+# 10x10 heatmaps ----------------------------------------------------------
+
+data.heatmap <- data.counts %>% 
+  filter(version %in% version.include) %>%
+  mutate(resp.h = (resp.h.hv-1)*6+resp.h.pos,
+         resp.v = (resp.v.hv-1)*6+resp.v.pos) %>%
+  group_by(experiment, subjectID, version) %>%
+  mutate(p = n/sum(n),
+         p.smooth = (n+1)/sum(n+1),
+         log.p = log(p.smooth)) %>%
+  mutate(log.p = ifelse(resp.h == resp.v & experiment=='simultaneous', NA, log.p)) %>%
+  ungroup() %>%
+  group_by(experiment, version, resp.h, resp.v) %>%
+  summarise(n.ss=n(), 
+            mean.p = mean(p), 
+            sd.p = sd(p), 
+            sem.p = sd.p/sqrt(n.ss),
+            mean.log.p = mean(log.p), 
+            sd.log.p = sd(log.p), 
+            sem.log.p = sd.log.p/sqrt(n.ss)) %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                              levels = version.order)))
+
+data.heatmap %>%
+  ggplot(aes(x = resp.v, 
+             y = resp.h, 
+             fill=(mean.log.p)))+
+  facet_grid(experiment ~ description)+
+  geom_tile()+
+  theme_minimal()+
+  scale_x_continuous(breaks = c(-2:2, (-2:2)+6),
+                     labels = r.labels)+
+  scale_y_continuous(breaks = c(-2:2, (-2:2)+6),
+                     labels = r.labels,
+                     trans = "reverse")+
+  # scale_size_continuous(range=c(0.01,2))+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Probability of reported color source',
+       y = 'A-part response',
+       x = 'B-part response')
+```
+
+### lineplots
+
+When people report colors from the same object, are they correctly bound?   
+
+```{r lineplots, fig.width=10, fig.height=3.2}
+# plotting same-object line plots ----------------------------------------------------------
+
+data.lineplot <- data.counts %>% 
+  filter(version %in% version.include) %>%
+  mutate(sameObj = resp.h.pos == resp.v.pos,
+         partMatch = case_when(
+           resp.h.hv == 1 & resp.v.hv == 2 ~ 'correct',
+           resp.h.hv == 2 & resp.v.hv == 1 ~ 'swapped',
+           resp.h.hv == resp.v.hv ~ 'repeated',
+           TRUE ~ 'error')) %>%
+  filter(partMatch != 'repeated') %>%
+  group_by(experiment, subjectID, version) %>%
+  mutate(p = n/sum(n),
+         p.smooth = (n+1)/sum(n+1),
+         log.p = log(p.smooth),
+         pos = resp.h.pos) %>%
+  filter(sameObj) %>%
+  ungroup() %>%
+  group_by(experiment, version, partMatch, pos) %>%
+  summarise(n.ss=n(), 
+            mean.p = mean(p), 
+            sd.p = sd(p), 
+            sem.p = sd.p/sqrt(n.ss),
+            mean.log.p = mean(log.p), 
+            sd.log.p = sd(log.p), 
+            sem.log.p = sd.log.p/sqrt(n.ss)) %>% 
+  mutate(description = (factor(version.code[as.character(version)],
+                              levels = version.order)))
+
+data.lineplot  %>%
+  ggplot(aes(x = pos, 
+             y = mean.log.p, 
+             ymin = mean.log.p-2*sem.log.p, 
+             ymax=mean.log.p+2*sem.log.p,
+             color=partMatch))+
+  facet_grid(experiment ~ description)+
+  geom_label(data=version.summary %>% filter(version %in% version.include), 
+             aes(x=-1.5,y=-1.2, label=paste0('n=',subjects), 
+                 ymin=NULL,ymax=NULL,color=NULL),
+             size=3)+
+  geom_pointrange(size=0.3)+
+  geom_line() +
+  scale_color_manual(values=c('correct'='blue', 
+                              'repeated'='gray', 
+                              'swapped'='red', 
+                              'error' = 'orange'))+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid.minor = element_blank())+
+  labs(title = 'Probability of reported colors',
+       subtitle = 'normalized after removing repetitions; showing only same source object',
+       y = 'mean log(prob) +/- 2 sem',
+       x = 'source object position (0=target)')
+```
+
+## model summaries
+
+```{r models}
+# fit model ----------------------------------------------------------
+source('fit.models.R')
+
+use.models = c('U', 'UF+', 'UFP+1', 'UFPO+1', 'UFPO+3', 'full')
+
+fits <- fits %>% filter(model %in% use.models)
+
+fit.summary <- fits %>% 
+  group_by(experiment, version, model) %>%
+  summarise(nLL.sum = sum(nl.likelihood),
+            nLLpt.mean = mean(nl.likelihood/n.obs),
+            nLL.pt.se = sem(nl.likelihood/n.obs),
+            AIC.mean = mean(2*nl.likelihood+2*n.params),
+            BIC.mean = mean(2*nl.likelihood+log(n.obs)*n.params),
+            n.params = mean(n.params),
+            n.ss = n())
+
+model.order <- fit.summary %>% 
+  group_by(model) %>% 
+  summarise(n.params = mean(n.params), nll = sum(nLL.sum)) %>%
+  arrange(n.params, desc(nll)) %>%
+  .$model
+
+
+model.order.AIC <- fit.summary %>% 
+  group_by(model) %>% 
+  summarise(n.params = mean(n.params), nll = sum(nLL.sum), m.AIC = mean(AIC.mean)) %>%
+  arrange(desc(m.AIC)) %>%
+  .$model
+
+fit.summary %>%
+  ungroup() %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order.AIC)) %>%
+  select(experiment, description, model, AIC.mean) %>%
+  group_by(experiment, description) %>%
+  arrange(model) %>%
+  mutate(delta.AIC = round(ifelse(model=='U', AIC.mean, c(0, diff(AIC.mean))),0)) %>%
+  ungroup() %>%
+  select(description, experiment, model, delta.AIC) %>%
+  spread(key = model, value = delta.AIC) %>%
+  arrange(experiment, description) %>%
+  knitr::kable()
+```
+
+
+```{r model_aic_graph_u, fig.width=10, fig.height=3.2}
+fits %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order))) %>%
+  select(experiment, description, subjectID, model, nl.likelihood, n.params, n.obs) %>% 
+  mutate(AIC = nl.likelihood+2*n.params,
+         model = factor(model, levels=model.order.AIC)) %>%
+  group_by(experiment, description, subjectID) %>%
+  arrange(model) %>%
+  mutate(delta.AIC = -c(0, diff(AIC)),
+         rAIC = AIC[model=='U'] - AIC) %>%
+  ungroup() %>%
+  group_by(experiment, description, model) %>%
+  summarise(rAIC.m = mean(rAIC), rAIC.s = sem(rAIC)) %>%
+  ungroup() %>%
+  ggplot(aes(x=model, 
+             y=rAIC.m, 
+             ymax=rAIC.m+rAIC.s, 
+             ymin=rAIC.m-rAIC.s,
+             color=rAIC.m>0))+
+  facet_grid(experiment~description)+
+  geom_hline(yintercept = 0, color='red')+
+  geom_pointrange(size=0.2)+
+  scale_color_manual(values = c('TRUE' = 'black', 'FALSE'='red'))+
+  # scale_y_log10()+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'none',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'AIC/subject improvement over uniform',
+       x = 'model')
+```
+
+```{r model_aic_graph_ufr, fig.width=10, fig.height=3.2}
+fits %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order))) %>%
+  select(experiment, description, subjectID, model, nl.likelihood, n.params, n.obs) %>% 
+  mutate(AIC = nl.likelihood+2*n.params,
+         model = factor(model, levels=model.order.AIC)) %>%
+  filter(!(model %in% c('U', 'U+') )) %>%
+  group_by(experiment, description, subjectID) %>%
+  arrange(model) %>%
+  mutate(delta.AIC = -c(0, diff(AIC)),
+         rAIC = AIC[model=='UF+'] - AIC) %>%
+  ungroup() %>%
+  group_by(experiment, description, model) %>%
+  summarise(rAIC.m = mean(rAIC), rAIC.s = sem(rAIC)) %>%
+  ungroup() %>%
+  ggplot(aes(x=model, 
+             y=rAIC.m, 
+             ymax=rAIC.m+rAIC.s, 
+             ymin=rAIC.m-rAIC.s,
+             color=rAIC.m>0))+
+  facet_grid(experiment~description)+
+  geom_hline(yintercept = 0, color='red')+
+  geom_pointrange(size=0.2)+
+  scale_color_manual(values = c('TRUE' = 'black', 'FALSE'='red'))+
+  # scale_y_log10()+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'none',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'AIC/subject improvement over UF+',
+       x = 'model')
+```
+
+```{r model_nll.trial, fig.width=10, fig.height=3.2}
+
+data.best.version = data.best %>% group_by(experiment, version) %>%
+  summarize(best.ll = mean(best.ll),
+            worst.ll = mean(worst.ll)) %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order)))
+
+fits %>%
+  mutate(description = droplevels(factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  ggplot(aes(x=model, y=nl.likelihood/n.obs))+
+  facet_grid(experiment~description)+
+  geom_hline(data = data.best.version, aes(yintercept=worst.ll), color='red')+
+  geom_hline(data = data.best.version, aes(yintercept=best.ll), color='blue')+
+  geom_point(size=0.2, color='gray')+
+  geom_line(aes(group=subjectID), color='gray', size=0.1)+
+  stat_summary(fun.data = mean_se, geom='pointrange', size=0.2)+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'negative log likelihood per trial',
+       x = 'model')
+```
+
+```{r model_rel.nll.trial, fig.width=10, fig.height=3.2}
+fits %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  left_join(data.best, by = c('experiment', 'version', 'subjectID')) %>%
+  mutate(frac.imp = (worst.ll-nl.likelihood/n.obs)/(worst.ll-best.ll),
+         frac.best = nl.likelihood/n.obs/best.ll,
+         frac.worst = nl.likelihood/n.obs/worst.ll) %>%
+  ggplot(aes(x=model, y=frac.imp))+
+  facet_grid(experiment~description)+
+  geom_hline(yintercept = 0, color='red')+
+  geom_hline(yintercept = 1, color='blue')+
+  geom_point(size=0.2, color='gray')+
+  geom_line(aes(group=subjectID), color='gray', size=0.1)+
+  stat_summary(fun.data = mean_se, geom='pointrange', size=0.2)+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'model nLL/trial 0: worst(uniform), 1: best(empirical)',
+       x = 'model (# parameters)')
+```
+
+## diagnostic
+
+```{r diagnostics, fig.width=10, fig.height=10}
+# are the models systematically missing predicting something?
+
+deltamat <- function(datarow){
+  P = datarow$P[[1]]
+  D = datarow$datamat[[1]]
+  norep = datarow$experiment == 'simultaneous'
+  # sm = matrix(1, ncol=10, nrow=10)
+  # if(norep){
+  #   diag(sm) = 0
+  # }
+  # sm = sm/sum(sm)
+  # D <- D+sm
+  # Pd = D/sum(D)
+  # X <- log(Pd)-log(P)
+  X = (D/sum(D)-P)
+  if(norep){
+    diag(X) = NA
+  }
+  rownames(X) <- c((-2:2), (-2:2)+6)
+  colnames(X) <- c((-2:2), (-2:2)+6)
+  X %>% 
+    as.table() %>%
+    as.data.frame() %>%
+    mutate(resp.h = as.numeric(as.character(Var1)), 
+           resp.v = as.numeric(as.character(Var2))) %>%
+    select(resp.h, 
+           resp.v, 
+           delta.log.P = Freq)
+}
+
+models = c('U', 'UF+', 'UFP+1', 'UFPO+1', 'full')
+out <- fits %>% filter(model %in% models) %>%
+  select(experiment, version, model, subjectID, P) %>%
+  left_join(data.fit, by=c('experiment', 'version', 'subjectID')) %>% 
+  group_by(experiment, version, subjectID, model) %>%
+  do(deltamat(.)) %>% 
+  ungroup() %>%
+  group_by(experiment, version, model, resp.h, resp.v) %>%
+  summarise(n.ss=n(), 
+            mean.delta.log.p = mean(delta.log.P), 
+            sem.delta.log.p = sem(delta.log.P)) %>%
+  ungroup() %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                               levels = version.order)),
+         model = factor(model, levels=model.order))
+
+cols <- RColorBrewer::brewer.pal(n = 5, name = "RdBu") 
+cols = c(cols[1], cols, cols[5])
+out %>% 
+  ggplot(aes(x = resp.v, 
+             y = resp.h, 
+             fill=(mean.delta.log.p)))+
+  facet_grid(model+experiment ~ description)+
+  geom_tile()+
+  theme_minimal()+
+  scale_x_continuous(breaks = c(-2:2, (-2:2)+6),
+                     labels = r.labels)+
+  scale_y_continuous(breaks = c(-2:2, (-2:2)+6),
+                     labels = r.labels,
+                     trans = "reverse")+
+  scale_fill_gradientn(colors = cols,
+                       values = scales::rescale(c(-0.5, -0.15, -0.01, 0, 0.015, 0.1, 0.5)),
+                       guide = "colorbar", limits=c(-0.25, 0.25))+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Data-Model prediction',
+       y = 'B-part response',
+       x = 'A-part response')
+```
+
+
+```{r model_delta.rel.nll.trial, fig.width=10, fig.height=3.2, eval=FALSE}
+fits %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  left_join(data.best, by = c('experiment', 'version', 'subjectID')) %>%
+  mutate(frac.imp = (worst.ll-nl.likelihood/n.obs)/(worst.ll-best.ll),
+         frac.best = nl.likelihood/n.obs/best.ll,
+         frac.worst = nl.likelihood/n.obs/worst.ll) %>% 
+  group_by(experiment, version, subjectID) %>%
+  arrange(model) %>%
+  mutate(delta.frac.imp = c(0,diff(frac.imp))) %>%
+  ungroup() %>%
+  ggplot(aes(x=model, y=delta.frac.imp))+
+  facet_grid(experiment~description)+
+  geom_point(size=0.2, color='gray')+
+  geom_line(aes(group=subjectID), color='gray', size=0.1)+
+  stat_summary(fun.data = mean_se, geom='pointrange', size=0.2)+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'model nLL/trial 0: worst(uniform), 1: best(empirical)',
+       x = 'model (# parameters)')
+```
+
+
+
+```{r model_nLL_trial_expt, fig.width=10, fig.height=3.2, eval=FALSE}
+fits %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  left_join(data.best, by = c('experiment', 'version', 'subjectID')) %>%
+  mutate(frac.imp = (worst.ll-nl.likelihood/n.obs)/(worst.ll-best.ll),
+         frac.best = nl.likelihood/n.obs/best.ll,
+         frac.worst = nl.likelihood/n.obs/worst.ll) %>% 
+  group_by(experiment, version, model) %>%
+  summarize(m = mean(nl.likelihood/n.obs),
+            s = sem(nl.likelihood/n.obs)) %>% 
+  gather(variable, value, -(experiment:model)) %>% 
+  unite(temp, experiment, variable) %>% 
+  spread(temp, value) %>% 
+  ungroup() %>%
+  mutate(description = droplevels(factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  ggplot(aes(x=simultaneous_m, y=sequential_m, color=model))+
+  facet_grid(.~description)+
+  geom_abline(slope=1, intercept = 0, color='gray', size=0.1)+
+  geom_errorbar(aes(ymin = sequential_m-sequential_s,
+                    ymax = sequential_m+sequential_s),
+                width = 0) +
+  geom_errorbarh(aes(xmin = simultaneous_m-simultaneous_s,
+                    xmax = simultaneous_m+simultaneous_s),
+                height = 0) +
+  geom_point(size=0.2)+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'Sequential nLL/trial',
+       x = 'Simultaneous nLL/trial')
+```
+```{r more-model, eval=FALSE}
+fits %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  left_join(data.best, by = c('experiment', 'version', 'subjectID')) %>%
+  mutate(frac.best = (worst.ll-nl.likelihood/n.obs)/(worst.ll-best.ll)) %>%
+  filter(experiment == 'simultaneous', 
+         description == '2x2',
+         model == 'U') %>%
+  ggplot(aes(x=worst.ll, y=best.ll))+
+  geom_point(color='black')+
+  geom_point(aes(y=nl.likelihood/n.obs), color='red')+
+  geom_abline(slope=1, intercept=0, color='gray')
+
+fits %>%
+  mutate(description = droplevels(factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  left_join(data.best, by = c('experiment', 'version', 'subjectID')) %>%
+  mutate(frac.best = (worst.ll-nl.likelihood)/(worst.ll-best.ll)) %>%
+  ggplot(aes(x=worst.ll, y=best.ll))+geom_point()
+
+fits %>%
+  mutate(description = droplevels(factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  ggplot(aes(x=model, y=nl.likelihood/n.obs))+
+  facet_grid(experiment~description)+
+  geom_point(size=0.2, color='gray')+
+  geom_line(aes(group=subjectID), color='gray', size=0.1)+
+  stat_summary(fun.data = mean_se, geom='pointrange', size=0.5)+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'negative log likelihood per trial',
+       x = 'model')
+
+fits %>% 
+  mutate(nLLpt = nl.likelihood/n.obs,
+         AIC = 2*nl.likelihood+2*n.params,
+         BIC = 2*nl.likelihood+log(n.obs)*n.params) %>%
+  group_by(experiment, version, subjectID) %>%
+  mutate(AICrank = rank(AIC)) %>%
+  ungroup() %>%
+  group_by(model, experiment, version) %>%
+  summarize(p.best = mean(AICrank==1)) %>%
+  ungroup() %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order)),
+         model = factor(model, levels=model.order)) %>%
+  ggplot(aes(x=model, y=p.best))+
+  facet_grid(experiment~description)+
+  geom_bar(stat='identity')+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'proportion of subjects for whom it was best (AIC)',
+       x = 'model')
+```
+
+
+```{r model_aic_graph, fig.width=10, fig.height=3.2, eval=FALSE}
+fits %>%
+  mutate(description = (factor(version.code[as.character(version)],
+                                         levels = version.order))) %>%
+  select(experiment, description, subjectID, model, nl.likelihood, n.params, n.obs) %>% 
+  mutate(AIC = nl.likelihood+2*n.params,
+         model = factor(model, levels=model.order.AIC)) %>%
+  group_by(experiment, description, subjectID) %>%
+  arrange(model) %>%
+  mutate(delta.AIC = -c(0, diff(AIC))) %>%
+  ungroup() %>%
+  group_by(experiment, description, model) %>%
+  summarise(delta.AIC.m = mean(delta.AIC), delta.AIC.s = sem(delta.AIC)) %>%
+  ungroup() %>%
+  ggplot(aes(x=model, 
+             y=delta.AIC.m, 
+             ymax=delta.AIC.m+delta.AIC.s, 
+             ymin=delta.AIC.m-delta.AIC.s))+
+  facet_grid(experiment~description)+
+  geom_pointrange(size=0.2)+
+  theme_minimal()+
+  theme(strip.text = element_text(face='bold'),
+        legend.position = 'top',
+        panel.grid = element_blank(),
+        axis.text = element_text(family = 'mono'),
+        axis.text.x = element_text(angle=90, hjust = 1, vjust=0.5),
+        panel.border = element_rect(fill=NA, color='gray'))+
+  labs(title = 'Model fits',
+       y = 'sequential AIC improvement',
+       x = 'model')
+```
