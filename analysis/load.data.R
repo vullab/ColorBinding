@@ -1,3 +1,4 @@
+require(tidyverse)
 
 if(RELOAD){
   data.paths = list('sequential' = '../sequential-selection/data/',
@@ -57,6 +58,16 @@ if(RELOAD){
       !(version.bars %in% c(-1,0)) ~ as.integer(version.offset),
       TRUE ~ as.integer(version.bars)
     ))
+  
+  # subject summary
+  drop.labels = data %>% 
+    count(experiment, subjectID, version) %>% 
+    filter(n<200) %>%
+    mutate(drop.labels = paste(experiment,version,subjectID,sep='-')) %>%
+    .$drop.labels
+  
+  data = data %>% 
+    filter(!(paste(experiment,version,subjectID,sep='-') %in% drop.labels))
 
   # convert into tabular list
   data.counts <- data %>% 
@@ -70,4 +81,27 @@ if(RELOAD){
 } else  {
   load('alldata.Rdata')
 }
+
+version.code = c(
+  '-1' = 'cross (+gap)',
+  '0' = 'target (circ)',
+  '1' = "target (egg)",
+  '2'  = "target (moon)",
+  '5' = 'T (rotate)',
+  '6' = '2x1 (-gap)',
+  '8' = '2x2', 
+  '9'  = 'T (fixed)',
+  '11' = '2x1 (+gap)',
+  '12' = 'cross (-gap)',
+  '13' = 'frame',
+  '3' = '(abandoned) played with size A',
+  '4' = '(abandoned) played with size B',
+  '7' = '(abandoned) 2x2 (box)',
+  '10' = '(abandoned) T (stacked)')
+
+r.labels = c('A -2', 'A -1', 'A  0', 'A +1', 'A +2',
+             'B -2', 'B -1', 'B  0', 'B +1', 'B +2')
+
+source('version.summary.R')
+
 
