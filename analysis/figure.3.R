@@ -23,8 +23,9 @@ data.heatmap <- data.counts %>%
                                levels = version.order)))
 
 g <- data.heatmap %>%
+  # filter(description %in% version.order[c(7:11,1)]) %>%
   plotJoint(type='heatmap')+
   theme(legend.position='right')+
-  facet_grid(experiment ~ description)
+  facet_grid(description ~ experiment)
 
 print(g)
